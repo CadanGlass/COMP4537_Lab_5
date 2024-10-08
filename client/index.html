@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insert Multiple Patients</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <h1>Insert Multiple Patients</h1>
+
+  <button id="insertButton">Insert Rows</button>
+
+  <script>
+    const button = document.getElementById('insertButton');
+
+    button.addEventListener('click', async () => {
+      const patients = [
+        { name: 'Sara Brown', dateOfBirth: '1901-01-01' },
+        { name: 'John Smith', dateOfBirth: '1941-01-01' },
+        { name: 'Jack Ma', dateOfBirth: '1961-01-30' },
+        { name: 'Elon Musk', dateOfBirth: '1999-01-01' }
+      ];
+
+      try {
+        const response = await axios.post('http://localhost:3000/insert-patients', patients);
+        alert(`Response from server: ${response.data.message}`);
+      } catch (error) {
+        console.error('Error:', error.response ? error.response.data : error.message);
+        alert('An error occurred while inserting patients.');
+      }
+    });
+  </script>
+</body>
+</html>
