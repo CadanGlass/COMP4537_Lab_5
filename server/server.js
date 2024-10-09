@@ -1,31 +1,31 @@
 require("dotenv").config();
 const http = require("http");
 const mysql = require("mysql2");
-const cors = require("cors");
+const cors = require("cors"); // Import cors package
 
 // MySQL connection setup
 const connection = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  port: process.env.DB_PORT || 1433, // Azure SQL uses 1433 port
+  host: process.env.DB_HOST || "127.0.0.1",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "your_password",
+  database: process.env.DB_DATABASE || "hospital",
+  port: process.env.DB_PORT || 3306,
 });
 
-// Connect to Azure MySQL Database
+// Connect to MySQL
 connection.connect((err) => {
   if (err) {
     console.error("Error connecting to MySQL: " + err.stack);
     return;
   }
-  console.log("Connected to Azure MySQL Database.");
+  console.log("Connected to MySQL as id " + connection.threadId);
 });
 
-// Function to set CORS headers
+// Function to set CORS headers manually
 function setCorsHeaders(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Allow all origins
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Allow these methods
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type"); // Allow specific headers
 }
 
 // Function to handle POST request for inserting multiple rows
@@ -45,7 +45,7 @@ function handleInsertPatients(req, res) {
         patient.name,
         patient.dateOfBirth,
       ]);
-      const query = "INSERT INTO Patients (name, dateOfBirth) VALUES ?";
+      const query = "INSERT INTO patients (name, dateOfBirth) VALUES ?";
 
       // Insert multiple rows into the database
       connection.query(query, [values], (err, result) => {
@@ -70,13 +70,14 @@ function handleInsertPatients(req, res) {
 
 // Create HTTP server to listen for requests
 const server = http.createServer((req, res) => {
+  // Handle OPTIONS preflight request for CORS
   if (req.method === "OPTIONS") {
     setCorsHeaders(res);
-    res.writeHead(204);
+    res.writeHead(204); // No Content response for OPTIONS
     return res.end();
   }
 
-  setCorsHeaders(res);
+  setCorsHeaders(res); // Set CORS headers for all requests
 
   if (req.method === "POST" && req.url === "/insert-patients") {
     handleInsertPatients(req, res);
