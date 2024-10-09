@@ -25,7 +25,9 @@
       ];
 
       try {
-        const response = await axios.post('http://localhost:3000/insert-patients', patients);
+        // Replace the localhost URL with the Azure App Service URL
+        const API_URL = 'https://comp4537-lab05.azurewebsites.net/insert-patients';
+        const response = await axios.post(API_URL, patients);
         alert(`Response from server: ${response.data.message}`);
       } catch (error) {
         console.error('Error:', error.response ? error.response.data : error.message);
