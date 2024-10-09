@@ -2,7 +2,9 @@
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "mysql2": "^3.11.3"
+    "mssql": "^11.0.1",
+    "mysql2": "^3.11.3",
+    "sqlite3": "^5.1.7"
   },
   "name": "server",
   "version": "1.0.0",
