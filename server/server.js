@@ -1,31 +1,22 @@
 require("dotenv").config();
 const http = require("http");
-const mysql = require("mysql2");
-const cors = require("cors"); // Import cors package
+const sqlite3 = require("sqlite3").verbose();
+const cors = require("cors");
 
-// MySQL connection setup
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST || "127.0.0.1",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "your_password",
-  database: process.env.DB_DATABASE || "hospital",
-  port: process.env.DB_PORT || 3306,
-});
-
-// Connect to MySQL
-connection.connect((err) => {
+// SQLite connection setup
+const db = new sqlite3.Database("./hospital.db", sqlite3.OPEN_READWRITE, (err) => {
   if (err) {
-    console.error("Error connecting to MySQL: " + err.stack);
+    console.error("Error connecting to SQLite: " + err.message);
     return;
   }
-  console.log("Connected to MySQL as id " + connection.threadId);
+  console.log("Connected to SQLite database.");
 });
 
 // Function to set CORS headers manually
 function setCorsHeaders(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Allow all origins
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Allow these methods
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type"); // Allow specific headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
 // Function to handle POST request for inserting multiple rows
@@ -40,15 +31,12 @@ function handleInsertPatients(req, res) {
     try {
       const patients = JSON.parse(body);
 
-      // Construct the query for inserting multiple rows
-      const values = patients.map((patient) => [
-        patient.name,
-        patient.dateOfBirth,
-      ]);
-      const query = "INSERT INTO patients (name, dateOfBirth) VALUES ?";
+      const values = patients.map((patient) => [patient.name, patient.dateOfBirth]);
 
-      // Insert multiple rows into the database
-      connection.query(query, [values], (err, result) => {
+      const placeholders = values.map(() => "(?, ?)").join(", ");
+      const query = `INSERT INTO patients (name, dateOfBirth) VALUES ${placeholders}`;
+
+      db.run(query, values.flat(), function (err) {
         if (err) {
           res.writeHead(500, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ error: "Database query failed" }));
@@ -57,7 +45,7 @@ function handleInsertPatients(req, res) {
         res.writeHead(201, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
-            message: `Inserted ${result.affectedRows} patients successfully`,
+            message: `Inserted ${this.changes} patients successfully`,
           })
         );
       });
@@ -70,14 +58,13 @@ function handleInsertPatients(req, res) {
 
 // Create HTTP server to listen for requests
 const server = http.createServer((req, res) => {
-  // Handle OPTIONS preflight request for CORS
   if (req.method === "OPTIONS") {
     setCorsHeaders(res);
-    res.writeHead(204); // No Content response for OPTIONS
+    res.writeHead(204);
     return res.end();
   }
 
-  setCorsHeaders(res); // Set CORS headers for all requests
+  setCorsHeaders(res);
 
   if (req.method === "POST" && req.url === "/insert-patients") {
     handleInsertPatients(req, res);

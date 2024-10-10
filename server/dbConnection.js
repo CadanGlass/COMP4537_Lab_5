@@ -1,30 +1,26 @@
-require("dotenv").config(); // Load environment variables from .env
+require("dotenv").config();
+const sqlite3 = require("sqlite3").verbose();
 
-const mysql = require("mysql2");
-
-// Create a connection using environment variables
-const connection = mysql.createConnection({
-  host: process.env.DB_HOST, // MySQL host from .env
-  user: process.env.DB_USER, // MySQL username from .env
-  password: process.env.DB_PASSWORD, // MySQL password from .env
-  database: process.env.DB_DATABASE, // MySQL database from .env
-  port: process.env.DB_PORT || 3306, // MySQL port (defaults to 3306)
-});
-
-// Connect to the MySQL server
-connection.connect((err) => {
+const db = new sqlite3.Database("./hospital.db", sqlite3.OPEN_READWRITE, (err) => {
   if (err) {
-    console.error("Error connecting: " + err.stack);
+    console.error("Error connecting to SQLite: " + err.message);
     return;
   }
-  console.log("Connected as id " + connection.threadId);
+  console.log("Connected to SQLite database.");
 });
 
-// Query the database (replace 'your_table' with the actual table name)
-connection.query("SELECT * FROM patients", (err, results, fields) => {
-  if (err) throw err;
-  console.log(results); // Results from the query
+// Example query to fetch patients
+db.all("SELECT * FROM patients", (err, rows) => {
+  if (err) {
+    throw err;
+  }
+  console.log(rows);
 });
 
 // Close the connection
-connection.end();
+db.close((err) => {
+  if (err) {
+    console.error(err.message);
+  }
+  console.log("Closed the database connection.");
+});
