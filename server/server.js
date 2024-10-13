@@ -37,11 +37,9 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  if (req.method === "GET" && pathname.startsWith("/lab5/api/v1/sql/")) {
+  if (req.method === "GET" && pathname.startsWith("/api/v1/sql/")) {
     // Handle GET SQL queries
-    const sqlQuery = decodeURIComponent(
-      pathname.replace("/lab5/api/v1/sql/", "")
-    );
+    const sqlQuery = decodeURIComponent(pathname.replace("/api/v1/sql/", ""));
     if (sqlQuery.trim().toLowerCase().startsWith("select")) {
       handleSqlGetQuery(req, res, sqlQuery);
     } else {
@@ -57,8 +55,13 @@ const server = http.createServer((req, res) => {
       body += chunk.toString();
     });
     req.on("end", () => {
-      const { query } = JSON.parse(body);
-      handleSqlPostQuery(req, res, query);
+      try {
+        const { query } = JSON.parse(body);
+        handleSqlPostQuery(req, res, query);
+      } catch (error) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid JSON payload" }));
+      }
     });
   } else if (req.method === "POST" && pathname === "/insert-patients") {
     // Handle POST request for inserting multiple patients
@@ -67,7 +70,12 @@ const server = http.createServer((req, res) => {
       body += chunk.toString();
     });
     req.on("end", () => {
-      handleInsertPatients(req, res, body);
+      try {
+        handleInsertPatients(req, res, body);
+      } catch (error) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid JSON payload" }));
+      }
     });
   } else {
     res.writeHead(404, { "Content-Type": "application/json" });
@@ -123,7 +131,14 @@ function handleSqlPostQuery(req, res, query) {
 
 // Function to handle the insertion of multiple patients
 function handleInsertPatients(req, res, body) {
-  const patients = JSON.parse(body);
+  let patients;
+  try {
+    patients = JSON.parse(body);
+  } catch (error) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ error: "Invalid JSON payload" }));
+  }
+
   const values = patients.map((patient) => [patient.name, patient.dateOfBirth]);
   const placeholders = values.map(() => "(?, ?)").join(", ");
   const query = `INSERT INTO patients (name, dateOfBirth) VALUES ${placeholders}`;
