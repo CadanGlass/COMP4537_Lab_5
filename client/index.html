@@ -5,22 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SQL Query Executor and Insert Multiple Patients</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="Lang/en.js"></script> <!-- Load the language file -->
 </head>
 <body>
-  <h1>SQL Query Executor and Insert Multiple Patients</h1>
+  <h1 id="pageTitle"></h1>
 
   <!-- Textarea for SQL Queries -->
-  <textarea id="sqlQuery" rows="6" cols="60" placeholder="Enter your SELECT or INSERT query here"></textarea>
+  <textarea id="sqlQuery" rows="6" cols="60" placeholder=""></textarea>
   <br>
-  <button id="executeQueryButton">Execute Query</button>
+  <button id="executeQueryButton"></button>
 
   <!-- Button to Insert Multiple Patients -->
-  <button id="insertPatientsButton">Insert Multiple Patients</button>
+  <button id="insertPatientsButton"></button>
 
   <!-- Div to display server response -->
   <div id="response"></div>
 
   <script>
+    // Set page content from lang object
+    document.getElementById("pageTitle").innerText = lang.title;
+    document.getElementById("executeQueryButton").innerText = lang.executeButton;
+    document.getElementById("insertPatientsButton").innerText = lang.insertButton;
+    document.getElementById("sqlQuery").placeholder = lang.sqlQueryPlaceholder;
+
     const executeButton = document.getElementById('executeQueryButton');
     const insertButton = document.getElementById('insertPatientsButton');
     const sqlQuery = document.getElementById('sqlQuery');
@@ -32,36 +39,29 @@
 
       if (query) {
         try {
-          // Updated endpoint with /app2/lab5 prefix
           const response = await axios.post('https://cadan.xyz/app2/lab5/sql-query', {
             query
           });
-          responseDiv.innerText = `Response: ${JSON.stringify(response.data)}`;
+          responseDiv.innerText = `${lang.responseFromServer} ${JSON.stringify(response.data)}`;
         } catch (error) {
           console.error('Error:', error.response ? error.response.data : error.message);
-          alert('An error occurred while executing the query.');
+          alert(lang.executeQueryError);
         }
       } else {
-        alert('Please enter a SQL query.');
+        alert(lang.queryEmptyAlert);
       }
     });
 
     // Function to insert multiple patients
     insertButton.addEventListener('click', async () => {
-      const patients = [
-        { name: 'Sara Brown', dateOfBirth: '1901-01-01' },
-        { name: 'John Smith', dateOfBirth: '1941-01-01' },
-        { name: 'Jack Ma', dateOfBirth: '1961-01-30' },
-        { name: 'Elon Musk', dateOfBirth: '1999-01-01' }
-      ];
+      const patients = lang.patients;
 
       try {
-        // Updated endpoint with /app2/lab5 prefix
         const response = await axios.post('https://cadan.xyz/app2/lab5/insert-patients', patients);
-        alert(`Response from server: ${response.data.message}`);
+        alert(`${lang.responseFromServer} ${response.data.message}`);
       } catch (error) {
         console.error('Error:', error.response ? error.response.data : error.message);
-        alert('An error occurred while inserting patients.');
+        alert(lang.insertPatientsError);
       }
     });
   </script>
