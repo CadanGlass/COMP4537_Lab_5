@@ -1,3 +1,5 @@
+// The solution presented here was generated with the assistance of ChatGPT-3.5
+// (https://chat.openai.com/), an AI model by OpenAI, to help implement and optimize this code.
 require("dotenv").config();
 const http = require("http");
 const sqlite3 = require("sqlite3").verbose();
