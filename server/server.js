@@ -23,7 +23,9 @@ function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
-// Create HTTP server to listen for requests
+// Update the POST endpoints to include the base path
+const BASE_PATH = "/app2/lab5";
+
 const server = http.createServer((req, res) => {
   // Set CORS headers for all requests
   setCorsHeaders(res);
@@ -37,10 +39,10 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  if (req.method === "GET" && pathname.startsWith("/lab5/api/v1/sql/")) {
+  if (req.method === "GET" && pathname.startsWith(`${BASE_PATH}/api/v1/sql/`)) {
     // Handle GET SQL queries
     const sqlQuery = decodeURIComponent(
-      pathname.replace("/lab5/api/v1/sql/", "")
+      pathname.replace(`${BASE_PATH}/api/v1/sql/`, "")
     );
     if (sqlQuery.trim().toLowerCase().startsWith("select")) {
       handleSqlGetQuery(req, res, sqlQuery);
@@ -50,7 +52,7 @@ const server = http.createServer((req, res) => {
         JSON.stringify({ error: "Only SELECT queries are allowed via GET." })
       );
     }
-  } else if (req.method === "POST" && pathname === "/sql-query") {
+  } else if (req.method === "POST" && pathname === `${BASE_PATH}/sql-query`) {
     // Handle POST SQL queries (SELECT or INSERT)
     let body = "";
     req.on("data", (chunk) => {
@@ -60,7 +62,7 @@ const server = http.createServer((req, res) => {
       const { query } = JSON.parse(body);
       handleSqlPostQuery(req, res, query);
     });
-  } else if (req.method === "POST" && pathname === "/insert-patients") {
+  } else if (req.method === "POST" && pathname === `${BASE_PATH}/insert-patients`) {
     // Handle POST request for inserting multiple patients
     let body = "";
     req.on("data", (chunk) => {
