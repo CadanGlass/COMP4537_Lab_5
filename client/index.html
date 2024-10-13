@@ -32,8 +32,8 @@
 
       if (query) {
         try {
-          // Updated URL to point to the live server
-          const response = await axios.post('https://cadan.xyz/app2/lab5/api/v1/sql-query', {
+          // Update the endpoint to match the server.js path
+          const response = await axios.post('https://cadan.xyz/sql-query', {
             query
           });
           responseDiv.innerText = `Response: ${JSON.stringify(response.data)}`;
@@ -56,8 +56,8 @@
       ];
 
       try {
-        // Updated URL to point to the live server
-        const response = await axios.post('https://cadan.xyz/app2/lab5/api/v1/insert-patients', patients);
+        // Update the endpoint to match the server.js path
+        const response = await axios.post('https://cadan.xyz/insert-patients', patients);
         alert(`Response from server: ${response.data.message}`);
       } catch (error) {
         console.error('Error:', error.response ? error.response.data : error.message);
