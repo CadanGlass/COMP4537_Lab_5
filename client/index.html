@@ -32,8 +32,8 @@
 
       if (query) {
         try {
-          // Update the endpoint to match the server.js path
-          const response = await axios.post('https://cadan.xyz/sql-query', {
+          // Updated endpoint with /app2/lab5 prefix
+          const response = await axios.post('https://cadan.xyz/app2/lab5/sql-query', {
             query
           });
           responseDiv.innerText = `Response: ${JSON.stringify(response.data)}`;
@@ -56,8 +56,8 @@
       ];
 
       try {
-        // Update the endpoint to match the server.js path
-        const response = await axios.post('https://cadan.xyz/insert-patients', patients);
+        // Updated endpoint with /app2/lab5 prefix
+        const response = await axios.post('https://cadan.xyz/app2/lab5/insert-patients', patients);
         alert(`Response from server: ${response.data.message}`);
       } catch (error) {
         console.error('Error:', error.response ? error.response.data : error.message);
