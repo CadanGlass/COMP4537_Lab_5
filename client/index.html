@@ -3,18 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Insert Multiple Patients</title>
+  <title>SQL Query Executor and Insert Multiple Patients</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-  <h1>Insert Multiple Patients</h1>
+  <h1>SQL Query Executor and Insert Multiple Patients</h1>
 
-  <button id="insertButton">Insert Rows</button>
+  <!-- Textarea for SQL Queries -->
+  <textarea id="sqlQuery" rows="6" cols="60" placeholder="Enter your SELECT or INSERT query here"></textarea>
+  <br>
+  <button id="executeQueryButton">Execute Query</button>
+
+  <!-- Button to Insert Multiple Patients -->
+  <button id="insertPatientsButton">Insert Multiple Patients</button>
+
+  <!-- Div to display server response -->
+  <div id="response"></div>
 
   <script>
-    const button = document.getElementById('insertButton');
+    const executeButton = document.getElementById('executeQueryButton');
+    const insertButton = document.getElementById('insertPatientsButton');
+    const sqlQuery = document.getElementById('sqlQuery');
+    const responseDiv = document.getElementById('response');
 
-    button.addEventListener('click', async () => {
+    // Function to execute SELECT or INSERT queries from the textarea
+    executeButton.addEventListener('click', async () => {
+      const query = sqlQuery.value.trim();
+
+      if (query) {
+        try {
+          const response = await axios.post('http://localhost:3000/sql-query', {
+            query
+          });
+          responseDiv.innerText = `Response: ${JSON.stringify(response.data)}`;
+        } catch (error) {
+          console.error('Error:', error.response ? error.response.data : error.message);
+          alert('An error occurred while executing the query.');
+        }
+      } else {
+        alert('Please enter a SQL query.');
+      }
+    });
+
+    // Function to insert multiple patients
+    insertButton.addEventListener('click', async () => {
       const patients = [
         { name: 'Sara Brown', dateOfBirth: '1901-01-01' },
         { name: 'John Smith', dateOfBirth: '1941-01-01' },
