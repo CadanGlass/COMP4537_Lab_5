@@ -18,10 +18,62 @@ const db = new sqlite3.Database(
 
 // Function to set CORS headers manually
 function setCorsHeaders(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Allow any origin
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Allow GET, POST, and OPTIONS
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type"); // Allow specific headers
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Or set to your Netlify URL
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
+
+// Create HTTP server to listen for requests
+const server = http.createServer((req, res) => {
+  // Set CORS headers for all requests
+  setCorsHeaders(res);
+
+  if (req.method === "OPTIONS") {
+    // Handle preflight request
+    res.writeHead(204); // No content for preflight requests
+    return res.end();
+  }
+
+  const parsedUrl = url.parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+
+  if (req.method === "GET" && pathname.startsWith("/lab5/api/v1/sql/")) {
+    // Handle GET SQL queries
+    const sqlQuery = decodeURIComponent(
+      pathname.replace("/lab5/api/v1/sql/", "")
+    );
+    if (sqlQuery.trim().toLowerCase().startsWith("select")) {
+      handleSqlGetQuery(req, res, sqlQuery);
+    } else {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({ error: "Only SELECT queries are allowed via GET." })
+      );
+    }
+  } else if (req.method === "POST" && pathname === "/sql-query") {
+    // Handle POST SQL queries (SELECT or INSERT)
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+    req.on("end", () => {
+      const { query } = JSON.parse(body);
+      handleSqlPostQuery(req, res, query);
+    });
+  } else if (req.method === "POST" && pathname === "/insert-patients") {
+    // Handle POST request for inserting multiple patients
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+    req.on("end", () => {
+      handleInsertPatients(req, res, body);
+    });
+  } else {
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ message: "Not Found" }));
+  }
+});
 
 // Function to handle SQL SELECT queries via GET
 function handleSqlGetQuery(req, res, query) {
@@ -89,57 +141,6 @@ function handleInsertPatients(req, res, body) {
     );
   });
 }
-
-// Create HTTP server to listen for requests
-const server = http.createServer((req, res) => {
-  // Set CORS headers for all responses
-  setCorsHeaders(res);
-
-  if (req.method === "OPTIONS") {
-    res.writeHead(204); // Respond to preflight request
-    return res.end();
-  }
-
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
-
-  if (req.method === "GET" && pathname.startsWith("/lab5/api/v1/sql/")) {
-    // Handle GET SQL queries
-    const sqlQuery = decodeURIComponent(
-      pathname.replace("/lab5/api/v1/sql/", "")
-    );
-    if (sqlQuery.trim().toLowerCase().startsWith("select")) {
-      handleSqlGetQuery(req, res, sqlQuery);
-    } else {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({ error: "Only SELECT queries are allowed via GET." })
-      );
-    }
-  } else if (req.method === "POST" && pathname === "/sql-query") {
-    // Handle POST SQL queries (SELECT or INSERT)
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => {
-      const { query } = JSON.parse(body);
-      handleSqlPostQuery(req, res, query);
-    });
-  } else if (req.method === "POST" && pathname === "/insert-patients") {
-    // Handle POST request for inserting multiple patients
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => {
-      handleInsertPatients(req, res, body);
-    });
-  } else {
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ message: "Not Found" }));
-  }
-});
 
 // Start the server
 const PORT = process.env.PORT || 3001;
