@@ -1,10 +1,20 @@
+require("dotenv").config();
+const http = require("http");
 const sqlite3 = require("sqlite3").verbose();
+const cors = require("cors"); // Import cors package
+const express = require("express");
+const app = express();
+
 const db = new sqlite3.Database("hospital.db");
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// Middleware to handle CORS
+app.use(cors()); // Apply CORS middleware
 
 // Function to create the table if it doesn't exist
 function createPatientsTable() {
-
-  
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS patients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,12 +35,11 @@ function createPatientsTable() {
 // Call the function to ensure the table is created when the application starts
 createPatientsTable();
 
-// Function to handle the insertion of multiple patients
-function handleInsertPatients(req, res, body) {
+// Route to handle POST request for inserting multiple rows
+app.post("/insert-patients", (req, res) => {
+  const body = req.body;
   try {
-    createPatientsTable();
-
-    const patients = JSON.parse(body);
+    const patients = body;
     if (!Array.isArray(patients)) {
       throw new Error("Payload must be an array of patients.");
     }
@@ -44,19 +53,20 @@ function handleInsertPatients(req, res, body) {
     db.run(query, values.flat(), function (err) {
       if (err) {
         console.error("Database query failed:", err.message); // Enhanced logging
-        res.writeHead(500, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ error: "Database query failed" }));
+        return res.status(500).json({ error: "Database query failed" });
       }
-      res.writeHead(201, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          message: `Inserted ${this.changes} patients successfully`,
-        })
-      );
+      res.status(201).json({
+        message: `Inserted ${this.changes} patients successfully`,
+      });
     });
   } catch (error) {
     console.error("Error processing insert patients:", error.message); // Enhanced logging
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Invalid JSON payload or data format." }));
+    res.status(400).json({ error: "Invalid JSON payload or data format." });
   }
-}
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
