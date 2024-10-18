@@ -1,185 +1,112 @@
-// The solution presented here was generated with the assistance of ChatGPT-3.5
-// (https://chat.openai.com/), an AI model by OpenAI, to help implement and optimize this code.
 require("dotenv").config();
 const http = require("http");
-const sqlite3 = require("sqlite3").verbose();
-const url = require("url");
+const mysql = require("mysql2");
+const cors = require("cors"); // Import cors package
 
-// SQLite connection setup
-const db = new sqlite3.Database(
-  "./hospital.db",
-  sqlite3.OPEN_READWRITE,
-  (err) => {
-    if (err) {
-      console.error("Error connecting to SQLite: " + err.message);
-      return;
-    }
-    console.log("Connected to SQLite database.");
+// MySQL connection setup
+const connection = mysql.createConnection({
+  host: process.env.DB_HOST || "127.0.0.1",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "your_password",
+  database: process.env.DB_DATABASE || "hospital",
+  port: process.env.DB_PORT || 3306,
+});
+
+// Connect to MySQL and create table if it doesn't exist
+connection.connect((err) => {
+  if (err) {
+    console.error("Error connecting to MySQL: " + err.stack);
+    return;
   }
-);
+  console.log("Connected to MySQL as id " + connection.threadId);
+
+  // Create the patients table if it does not exist
+  const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS patients (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      dateOfBirth DATE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  connection.query(createTableQuery, (err, result) => {
+    if (err) {
+      console.error("Error creating table: " + err.stack);
+    } else {
+      console.log("Table 'patients' is ready");
+    }
+  });
+});
 
 // Function to set CORS headers manually
 function setCorsHeaders(res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // Or set to your Netlify URL
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Allow all origins
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Allow these methods
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type"); // Allow specific headers
 }
 
-// Update BASE_PATH to "/lab5"
-const BASE_PATH = "/lab5";
+// Function to handle POST request for inserting multiple rows
+function handleInsertPatients(req, res) {
+  let body = "";
+
+  req.on("data", (chunk) => {
+    body += chunk.toString();
+  });
+
+  req.on("end", () => {
+    try {
+      const patients = JSON.parse(body);
+
+      // Construct the query for inserting multiple rows
+      const values = patients.map((patient) => [
+        patient.name,
+        patient.dateOfBirth,
+      ]);
+      const query = "INSERT INTO patients (name, dateOfBirth) VALUES ?";
+
+      // Insert multiple rows into the database
+      connection.query(query, [values], (err, result) => {
+        if (err) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "Database query failed" }));
+        }
+
+        res.writeHead(201, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            message: `Inserted ${result.affectedRows} patients successfully`,
+          })
+        );
+      });
+    } catch (error) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ message: "Invalid JSON data" }));
+    }
+  });
+}
 
 // Create HTTP server to listen for requests
 const server = http.createServer((req, res) => {
-  // Set CORS headers for all requests
-  setCorsHeaders(res);
-
+  // Handle OPTIONS preflight request for CORS
   if (req.method === "OPTIONS") {
-    // Handle preflight request
-    res.writeHead(204); // No content for preflight requests
+    setCorsHeaders(res);
+    res.writeHead(204); // No Content response for OPTIONS
     return res.end();
   }
 
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
+  setCorsHeaders(res); // Set CORS headers for all requests
 
-  console.log(`Received ${req.method} request for ${pathname}`); // Logging for debugging
-
-  if (req.method === "GET" && pathname.startsWith(`${BASE_PATH}/api/v1/sql/`)) {
-    // Handle GET SQL queries
-    const sqlQuery = decodeURIComponent(
-      pathname.replace(`${BASE_PATH}/api/v1/sql/`, "")
-    );
-    if (sqlQuery.trim().toLowerCase().startsWith("select")) {
-      handleSqlGetQuery(req, res, sqlQuery);
-    } else {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({ error: "Only SELECT queries are allowed via GET." })
-      );
-    }
-  } else if (req.method === "POST" && pathname === `${BASE_PATH}/sql-query`) {
-    // Handle POST SQL queries (SELECT or INSERT)
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => {
-      try {
-        const { query } = JSON.parse(body);
-        handleSqlPostQuery(req, res, query);
-      } catch (error) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Invalid JSON payload." }));
-      }
-    });
-  } else if (
-    req.method === "POST" &&
-    pathname === `${BASE_PATH}/insert-patients`
-  ) {
-    // Handle POST request for inserting multiple patients
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => {
-      try {
-        handleInsertPatients(req, res, body);
-      } catch (error) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Invalid JSON payload." }));
-      }
-    });
+  if (req.method === "POST" && req.url === "/insert-patients") {
+    handleInsertPatients(req, res);
   } else {
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ message: "Not Found" }));
   }
 });
 
-// Function to handle SQL SELECT queries via GET
-function handleSqlGetQuery(req, res, query) {
-  db.all(query, [], (err, rows) => {
-    if (err) {
-      console.error("Database query failed:", err.message); // Enhanced logging
-      res.writeHead(500, { "Content-Type": "application/json" });
-      return res.end(JSON.stringify({ error: "Database query failed" }));
-    }
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(rows));
-  });
-}
-
-// Function to handle SQL INSERT or SELECT queries via POST
-function handleSqlPostQuery(req, res, query) {
-  if (query.trim().toLowerCase().startsWith("select")) {
-    db.all(query, [], (err, rows) => {
-      if (err) {
-        console.error("Database query failed:", err.message); // Enhanced logging
-        res.writeHead(500, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ error: "Database query failed" }));
-      }
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(rows));
-    });
-  } else if (query.trim().toLowerCase().startsWith("insert")) {
-    db.run(query, function (err) {
-      if (err) {
-        console.error("Database query failed:", err.message); // Enhanced logging
-        res.writeHead(500, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ error: "Database query failed" }));
-      }
-      res.writeHead(201, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          message: `Inserted ${this.changes} rows successfully`,
-        })
-      );
-    });
-  } else {
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        error: "Only SELECT and INSERT queries are allowed via POST.",
-      })
-    );
-  }
-}
-
-// Function to handle the insertion of multiple patients
-function handleInsertPatients(req, res, body) {
-  try {
-    const patients = JSON.parse(body);
-    if (!Array.isArray(patients)) {
-      throw new Error("Payload must be an array of patients.");
-    }
-    const values = patients.map((patient) => [
-      patient.name,
-      patient.dateOfBirth,
-    ]);
-    const placeholders = values.map(() => "(?, ?)").join(", ");
-    const query = `INSERT INTO patients (name, dateOfBirth) VALUES ${placeholders}`;
-
-    db.run(query, values.flat(), function (err) {
-      if (err) {
-        console.error("Database query failed:", err.message); // Enhanced logging
-        res.writeHead(500, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ error: "Database query failed" }));
-      }
-      res.writeHead(201, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          message: `Inserted ${this.changes} patients successfully`,
-        })
-      );
-    });
-  } catch (error) {
-    console.error("Error processing insert patients:", error.message); // Enhanced logging
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Invalid JSON payload or data format." }));
-  }
-}
-
 // Start the server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
 });
