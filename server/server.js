@@ -3,6 +3,8 @@ const db = new sqlite3.Database("hospital.db");
 
 // Function to create the table if it doesn't exist
 function createPatientsTable() {
+
+  
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS patients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +28,8 @@ createPatientsTable();
 // Function to handle the insertion of multiple patients
 function handleInsertPatients(req, res, body) {
   try {
+    createPatientsTable();
+
     const patients = JSON.parse(body);
     if (!Array.isArray(patients)) {
       throw new Error("Payload must be an array of patients.");
